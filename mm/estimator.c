@@ -127,4 +127,8 @@ bool mm_decide(const struct mm_cost_delta *cost)
 		pr_info("Estimator has been called.\n");
 		return true;
 	}
+	else {
+		BUG();
+		return false;
+	}
 }
