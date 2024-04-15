@@ -20,6 +20,7 @@
 #include <linux/swapops.h>
 #include <linux/shmem_fs.h>
 #include <linux/ksm.h>
+#include <linux/mm_econ.h>
 
 #include <asm/tlb.h>
 #include <asm/pgalloc.h>

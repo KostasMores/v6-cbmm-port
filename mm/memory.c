@@ -77,6 +77,7 @@
 #include <linux/ptrace.h>
 #include <linux/vmalloc.h>
 #include <linux/sched/sysctl.h>
+#include <linux/mm_econ.h>
 
 #include <trace/events/kmem.h>
 
@@ -5064,6 +5065,10 @@ static vm_fault_t __handle_mm_fault(struct vm_area_struct *vma,
 	pgd_t *pgd;
 	p4d_t *p4d;
 	vm_fault_t ret;
+	/* Implement estimator */
+	struct mm_cost_delta mm_cost_delta;
+	struct mm_action mm_action;
+	bool should_do;
 
 	pgd = pgd_offset(mm, address);
 	p4d = p4d_alloc(mm, pgd, address);
@@ -5076,9 +5081,17 @@ static vm_fault_t __handle_mm_fault(struct vm_area_struct *vma,
 retry_pud:
 	if (pud_none(*vmf.pud) &&
 	    hugepage_vma_check(vma, vm_flags, false, true, true)) {
-		ret = create_huge_pud(&vmf);
-		if (!(ret & VM_FAULT_FALLBACK))
-			return ret;
+		/* Run the estimator to check if we should promote to huge */
+		mm_action.action = MM_ACTION_PROMOTE_HUGE;
+		mm_action.huge_page_order = HPAGE_PUD_SHIFT-PAGE_SHIFT;
+		mm_estimate_changes(&mm_action, &mm_cost_delta);
+		should_do = mm_decide(&mm_cost_delta);
+
+		if (should_do) {
+			ret = create_huge_pud(&vmf);
+			if (!(ret & VM_FAULT_FALLBACK))
+				return ret;
+		}
 	} else {
 		pud_t orig_pud = *vmf.pud;
 
@@ -5110,9 +5123,17 @@ retry_pud:
 
 	if (pmd_none(*vmf.pmd) &&
 	    hugepage_vma_check(vma, vm_flags, false, true, true)) {
-		ret = create_huge_pmd(&vmf);
-		if (!(ret & VM_FAULT_FALLBACK))
-			return ret;
+		/* Run the estimator to check if we should promote to huge */
+        mm_action.action = MM_ACTION_PROMOTE_HUGE;
+        mm_action.huge_page_order = HPAGE_PMD_ORDER;
+        mm_estimate_changes(&mm_action, &mm_cost_delta);
+        should_do = mm_decide(&mm_cost_delta);
+
+        if (should_do) {
+			ret = create_huge_pmd(&vmf);
+			if (!(ret & VM_FAULT_FALLBACK))
+				return ret;
+		}
 	} else {
 		vmf.orig_pmd = pmdp_get_lockless(vmf.pmd);
 
