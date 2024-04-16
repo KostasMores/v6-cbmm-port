@@ -83,30 +83,26 @@ mm_estimate_changes(const struct mm_action *action, struct mm_cost_delta *cost)
 {
     switch (action->action) {
         case MM_ACTION_NONE:
-            cost->kernel_computation = 0;
-            cost->page_fault_freq = 0;
-            cost->tlb_misses = 0;
+            cost->cost = 0;
+            cost->benefit = 0;
             return;
 
         case MM_ACTION_PROMOTE_HUGE:
             // TODO(markm)
-            cost->kernel_computation = 0;
-            cost->page_fault_freq = 0;
-            cost->tlb_misses = 0;
+            cost->cost = 0;
+            cost->benefit = 0;
             return;
 
         case MM_ACTION_DEMOTE_HUGE:
             // TODO(markm)
-            cost->kernel_computation = 0;
-            cost->page_fault_freq = 0;
-            cost->tlb_misses = 0;
+            cost->cost = 0;
+            cost->benefit = 0;
             return;
 
         case MM_ACTION_RUN_DEFRAG:
             // TODO(markm)
-            cost->kernel_computation = 0;
-            cost->page_fault_freq = 0;
-            cost->tlb_misses = 0;
+            cost->cost = 0;
+            cost->benefit = 0;
             return;
 
         default:
