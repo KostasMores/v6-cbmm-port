@@ -11,6 +11,90 @@
 */
 static int mm_econ_mode = 0;
 
+struct profile_range {
+	u64 start;
+	u64 end;
+	u64 benefit;
+
+	struct rb_node node;
+};
+
+/* The preloaded profile */
+static struct rb_root preloaded_profile = RB_ROOT;
+
+/* Search the profile for the range containing the given address, and return
+ * it, otherwise return NULL.
+ */
+static struct profile_range *
+profile_search(u64 address)
+{
+	struct rb_node *node = preloaded_profile.rb_node;
+
+	while (node) {
+		struct profile_range *range =
+			container_of(node, struct profile_range, node);
+
+		if (range->start <= addr && addr < range->end)
+			return range;
+
+		if (addr < range->start)
+			node = node->rb_left;
+		else
+			node = node->rb_right;
+	}
+
+	return NULL;
+
+}
+/*
+ * Insert the given range into the profile.
+ */
+static void
+profile_range_insert(struct profile_range *new_range)
+{
+	struct rb_node **new = &(preloaded_profile.rb_node), *parent = NULL;
+
+	while(*new) {
+		struct profile_range *this =
+			container_of(*new, struct profile_range, node);
+
+		if (((new_range->start <= this->start && this->start < new_range->end)
+					|| (this->start <= new_range->start && new_range->start < this->end)))
+		{
+			pr_err("Attempting to add overlapping profile range.\n");
+			return;
+		}
+
+		parent = *new;
+		if (new_range->start < this->start)
+			new = &((*new)->rb_left);
+		else if (new_range->start > this->start)
+			new = &((*new)->rb_right);
+		else
+			break;
+	}
+
+	rb_link_node(&new_range->node, parent, new);
+	rb_insert_color(&new_range->node, &preloaded_profile);
+}
+
+static void
+profile_free_all(void)
+{
+	struct rb_node *node = preloaded_profile.rb_node;
+
+	while(node) {
+		struct profile_range *range =
+			container_of(node, struct profile_range, node);
+
+		rb_erase(node, &preloaded_profile);
+		node = preloaded_profile.rb_node;
+
+		vfree(range);
+	}
+}
+
+/* Sysfs files to manipulate mm_econ options. */
 static ssize_t enabled_show(struct kobject *kobj,
 		struct kobj_attribute *attr, char *buf)
 {
@@ -43,8 +127,113 @@ static ssize_t enabled_store(struct kobject *kobj,
 static struct kobj_attribute enabled_attr =
 __ATTR(enabled, 0644, enabled_show, enabled_store);
 
+static ssize_t preloaded_profile_show(struct kobject *kobj,
+		struct kobj_attribute *attr, char *buf)
+{
+	ssize_t count = sprintf(buf, "\n");
+	struct rb_node *node = rb_first(&preloaded_profile);
+
+	pr_warn("mm_econ: profile...\n");
+
+	while(node) {
+		struct profile_range *range =
+			container_of(node, struct profile_range, node);
+		pr_warn("mm_econ: [%llu, %llu) (%llu bytes) misses=%llu\n",
+				range->start, range->end,
+				(range->end - range->start),
+				range->misses);
+
+		node = rb_next(node);
+	}
+
+	pr_warn("mm_econ: END profile...\n");
+
+	return count;
+}
+
+static ssize_t preloaded_profile_store(struct kobject *kobj,
+		struct kobj_attribute *attr,
+		const char *buf, size_t count)
+{
+	char *tok = (char *)buf;
+	struct profile_range *range = NULL;
+	ssize_t error;
+	int ret;
+	u64 value;
+	char *value_buf;
+
+	profile_free_all();
+
+	while (tok) {
+		range = vmalloc(sizeof(struct profile_range));
+		if (!range) {
+			error = -ENOMEM;
+			goto err;
+		}
+
+		// Get the start of range.
+		value_buf = strsep(&tok, " ");
+		if (!value_buf) {
+			error = -EINVAL;
+			goto err;
+		}
+
+		ret = kstrtoull(value_buf, 0, &value);
+		if (ret != 0) {
+			error = -EINVAL;
+			goto err;
+		}
+
+		range->start = value;
+
+		// Get the end of range.
+		value_buf = strsep(&tok, " ");
+        if (!value_buf) {
+            error = -EINVAL;
+            goto err;
+        }
+
+        ret = kstrtoull(value_buf, 0, &value);
+        if (ret != 0) {
+            error = -EINVAL;
+            goto err;
+        }
+
+        range->end = value;
+
+		// Get the benefit.
+		value_buf = strsep(&tok, ";");
+        if (!value_buf) {
+            error = -EINVAL;
+            goto err;
+        }
+
+        ret = kstrtoull(value_buf, 0, &value);
+        if (ret != 0) {
+            error = -EINVAL;
+            goto err;
+        }
+
+        range->benefit = value;
+
+		profile_range_insert(range);
+	}
+
+	return count;
+
+err:
+	if (range)
+		vfree(range);
+	profile_free_all();
+	return error;
+}
+
+static struct kobj_attribute preloaded_profile_attr =
+__ATTR(enabled, 0644, preloaded_profile_show, preloaded_profile_store);
+
 static struct attribute *mm_econ_attr[] = {
 	&enabled_attr.attr,
+	&preloaded_profile_attr.attr,
 	NULL,
 };
 
