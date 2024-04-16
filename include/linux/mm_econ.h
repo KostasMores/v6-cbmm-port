@@ -12,6 +12,7 @@
 struct mm_action {
     int action;
 
+	u64 address;
     // Extra parameters of the action.
     union {
         // No extra parameters are needed.
