@@ -60,6 +60,7 @@ enum scan_result {
 	SCAN_STORE_FAILED,
 	SCAN_COPY_MC,
 	SCAN_PAGE_FILLED,
+	SCAN_MM_ECON_FAILED,
 };
 
 #define CREATE_TRACE_POINTS
@@ -1252,6 +1253,9 @@ static int hpage_collapse_scan_pmd(struct mm_struct *mm,
 	spinlock_t *ptl;
 	int node = NUMA_NO_NODE, unmapped = 0;
 	bool writable = false;
+	struct mm_cost_delta mm_cost_delta;
+	struct mm_action mm_action;
+	bool should_do;
 
 	VM_BUG_ON(address & ~HPAGE_PMD_MASK);
 
@@ -1398,10 +1402,20 @@ static int hpage_collapse_scan_pmd(struct mm_struct *mm,
 out_unmap:
 	pte_unmap_unlock(pte, ptl);
 	if (result == SCAN_SUCCEED) {
-		result = collapse_huge_page(mm, address, referenced,
-					    unmapped, cc);
-		/* collapse_huge_page will return with the mmap_lock released */
-		*mmap_locked = false;
+		mm_action.address = address;
+		mm_action.action = MM_ACTION_PROMOTE_HUGE;
+		mm_action.huge_page_order = HPAGE_PMD_ORDER;
+		mm_estimate_changes(&mm_action, &mm_cost_delta);
+		should_do = mm_decide(&mm_cost_delta);
+
+		if (should_do) {
+			result = collapse_huge_page(mm, address, referenced,
+							unmapped, cc);
+			/* collapse_huge_page will return with the mmap_lock released */
+        	*mmap_locked = false;
+		} else {
+			result = SCAN_MM_ECON_CANCEL;
+		}
 	}
 out:
 	trace_mm_khugepaged_scan_pmd(mm, page, writable, referenced,
