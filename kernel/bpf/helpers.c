@@ -22,8 +22,23 @@
 #include <linux/security.h>
 #include <linux/btf_ids.h>
 #include <linux/bpf_mem_alloc.h>
+#include <linux/mm_econ.h>
 
 #include "../../lib/kstrtox.h"
+
+BPF_CALL_2(bpf_update_action, struct mm_action *, action, int, bpf_action)
+{
+    action->action = bpf_action;
+    return 0;
+}
+
+const struct bpf_func_proto bpf_update_action_proto = {
+    .func       = bpf_update_action,
+    .gpl_only   = false,
+    .ret_type   = RET_VOID,
+    .arg1_type  = ARG_ANYTHING,
+    .arg2_type  = ARG_ANYTHING,
+};
 
 /* If kernel subsystem is allowing eBPF programs to call this function,
  * inside its own verifier_ops->get_func_proto() callback it should return
@@ -1725,6 +1740,8 @@ bpf_base_func_proto(enum bpf_func_id func_id)
 		return &bpf_strtol_proto;
 	case BPF_FUNC_strtoul:
 		return &bpf_strtoul_proto;
+    case BPF_FUNC_update_action:
+        return &bpf_update_action_proto;
 	default:
 		break;
 	}
