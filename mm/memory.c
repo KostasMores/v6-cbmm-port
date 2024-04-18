@@ -5083,7 +5083,7 @@ retry_pud:
 	    hugepage_vma_check(vma, vm_flags, false, true, true)) {
 		/* Run the estimator to check if we should promote to huge */
 		mm_action.address = address;
-		mm_action.action = MM_ACTION_PROMOTE_HUGE;
+		mm_action.action = MM_PROMOTE_HUGE;
 		mm_action.huge_page_order = HPAGE_PUD_SHIFT-PAGE_SHIFT;
 		mm_estimate_changes(&mm_action, &mm_cost_delta);
 		should_do = mm_decide(&mm_cost_delta);

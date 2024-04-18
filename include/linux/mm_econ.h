@@ -7,6 +7,7 @@
 #define MM_ACTION_PROMOTE_HUGE  (1 <<  0)
 #define MM_ACTION_DEMOTE_HUGE   (1 <<  1)
 #define MM_ACTION_RUN_DEFRAG    (1 <<  2)
+#define MM_ACTION_EBPF_PROG_HOOKED  (1 <<  4)
 
 // An action that may be taken by the memory management subsystem.
 struct mm_action {

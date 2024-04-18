@@ -12,30 +12,28 @@ mm_estimate_changes(const struct mm_action *action, struct mm_cost_delta *cost)
 {
     switch (action->action) {
         case MM_ACTION_NONE:
-            cost->kernel_computation = 0;
-            cost->page_fault_freq = 0;
-            cost->tlb_misses = 0;
+			cost->cost = 0;
+			cost->benefit = 0;
             return;
 
-        case MM_ACTION_PROMOTE_HUGE:
-            // TODO(markm)
-            cost->kernel_computation = 0;
-            cost->page_fault_freq = 0;
-            cost->tlb_misses = 0;
+		case MM_ACTION_PROMOTE_HUGE:
+			cost->cost = 0;
+			cost->benefit = 0;
             return;
 
         case MM_ACTION_DEMOTE_HUGE:
-            // TODO(markm)
-            cost->kernel_computation = 0;
-            cost->page_fault_freq = 0;
-            cost->tlb_misses = 0;
+        	cost->cost = 0;
+        	cost->benefit = 0;
             return;
 
         case MM_ACTION_RUN_DEFRAG:
-            // TODO(markm)
-            cost->kernel_computation = 0;
-            cost->page_fault_freq = 0;
-            cost->tlb_misses = 0;
+        	cost->cost = 0;
+        	cost->benefit = 0;
+            return;
+
+        case MM_ACTION_EBPF_PROG_HOOKED:
+			pr_info("mm_estimate_changes: ebpf program hooked and changed.\n");
+			pr_info("\t\tnew cost = %llu, new benefit = %llu\n", cost->cost, cost->benefit);
             return;
 
         default:
@@ -48,5 +46,7 @@ mm_estimate_changes(const struct mm_action *action, struct mm_cost_delta *cost)
 // action associated with `cost` should be TAKEN, and false otherwise.
 bool mm_decide(const struct mm_cost_delta *cost)
 {
-    return false;
+    return true;
 }
+
+
