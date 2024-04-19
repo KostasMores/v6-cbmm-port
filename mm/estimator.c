@@ -33,7 +33,7 @@ mm_estimate_changes(const struct mm_action *action, struct mm_cost_delta *cost)
 
         case MM_ACTION_EBPF_PROG_HOOKED:
 			pr_info("mm_estimate_changes: ebpf program hooked and changed.\n");
-			pr_info("\t\tnew cost = %llu, new benefit = %llu\n", cost->cost, cost->benefit);
+			pr_info("\t\tebpf cost = %llu, ebpf benefit = %llu\n", cost->cost, cost->benefit);
             return;
 
         default:
