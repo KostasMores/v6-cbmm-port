@@ -40,6 +40,22 @@ const struct bpf_func_proto bpf_update_action_proto = {
     .arg2_type  = ARG_ANYTHING,
 };
 
+BPF_CALL_3(bpf_update_profile, struct mm_cost_delta *, cost, u64, bpf_cost, u64, bpf_benefit)
+{
+    cost->cost = bpf_cost;
+    cost->benefit = bpf_benefit;
+    return 0;
+}
+
+const struct bpf_func_proto bpf_update_profile_proto = {
+    .func       = bpf_update_profile,
+    .gpl_only   = false,
+    .ret_type   = RET_VOID,
+    .arg1_type  = ARG_ANYTHING,
+    .arg2_type  = ARG_ANYTHING,
+    .arg3_type  = ARG_ANYTHING,
+};
+
 /* If kernel subsystem is allowing eBPF programs to call this function,
  * inside its own verifier_ops->get_func_proto() callback it should return
  * bpf_map_lookup_elem_proto, so that verifier can properly check the arguments
@@ -1742,6 +1758,8 @@ bpf_base_func_proto(enum bpf_func_id func_id)
 		return &bpf_strtoul_proto;
     case BPF_FUNC_update_action:
         return &bpf_update_action_proto;
+    case BPF_FUNC_update_profile:
+        return &bpf_update_profile_proto;
 	default:
 		break;
 	}
